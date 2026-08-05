@@ -116,6 +116,17 @@ local function leave_terminal_input()
   end
 end
 
+local function code_cwd()
+  local bufname = vim.api.nvim_buf_get_name(0)
+  if bufname ~= "" then
+    local dir = vim.fn.fnamemodify(bufname, ":p:h")
+    if dir ~= "" and vim.fn.isdirectory(dir) == 1 then
+      return dir
+    end
+  end
+  return vim.uv.cwd()
+end
+
 local function focus_numbered_terminal(count)
   count = terminal_count(count)
   local terminal = current_snacks_terminal()
@@ -127,7 +138,7 @@ local function focus_numbered_terminal(count)
   end
 
   vim.schedule(function()
-    local terminal = Snacks.terminal.focus(nil, { cwd = cwd or LazyVim.root(), count = count })
+    local terminal = Snacks.terminal.focus(nil, { cwd = cwd or code_cwd(), count = count })
     sort_visible_terminals(terminal and terminal.win)
     vim.cmd("redraw!")
   end)
@@ -144,7 +155,7 @@ end
 
 local function focus_next_root_terminal()
   local terminal = current_snacks_terminal()
-  local cwd = terminal and terminal.cwd or LazyVim.root()
+  local cwd = terminal and terminal.cwd or code_cwd()
   local count = terminal and terminal_count((tonumber(terminal.id) or 1) + 1) or 1
   local target = numbered_terminal(count, cwd)
   if not (target and target.win and vim.api.nvim_win_is_valid(target.win)) and not has_room_for_new_terminal() then
@@ -188,4 +199,29 @@ vim.keymap.set({ "n", "i", "t" }, "<A-o>", function()
 end, { desc = "Terminal 3 (Root Dir)" })
 vim.keymap.set({ "n", "i", "t" }, "<M-/>", focus_next_root_terminal, { desc = "Next Terminal (Root Dir)" })
 vim.keymap.set({ "n", "i", "t" }, "<A-/>", focus_next_root_terminal, { desc = "Next Terminal (Root Dir)" })
+
+local function focus_code_window()
+  if vim.bo.buftype == "terminal" then
+    pcall(vim.cmd.stopinsert)
+  end
+
+  local prev = vim.fn.win_getid(vim.fn.winnr("#"))
+  if prev ~= 0 and vim.api.nvim_win_is_valid(prev) then
+    local bufnr = vim.api.nvim_win_get_buf(prev)
+    if vim.bo[bufnr].buftype ~= "terminal" then
+      vim.api.nvim_set_current_win(prev)
+      return
+    end
+  end
+
+  local current = vim.api.nvim_get_current_win()
+  for _, winid in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    if winid ~= current and vim.bo[vim.api.nvim_win_get_buf(winid)].buftype ~= "terminal" then
+      vim.api.nvim_set_current_win(winid)
+      return
+    end
+  end
+end
+
+vim.keymap.set({ "n", "t" }, "<M-j>", focus_code_window, { desc = "Focus Code Window (keep terminal open)" })
 vim.keymap.set("i", "<Left>", insert_left, { expr = true, replace_keycodes = true, desc = "Move left across lines" })
