@@ -12,16 +12,15 @@ local state = {
   job_id = nil,
   last_code_winid = nil,
   last_code_mode = "n",
-  codex_width = window_sizes.get("codex_width"),
+  opencode_width = window_sizes.get("opencode_width"),
   last_layout = nil,
   applying_width = false,
-  opening_codex = false,
+  opening_opencode = false,
   entering_terminal = false,
-  manual_scrolling = false,
   checktime_timer = nil,
 }
 
-local sync_codex_width
+local sync_opencode_width
 
 local function valid_buf(bufnr)
   return bufnr and vim.api.nvim_buf_is_valid(bufnr)
@@ -31,12 +30,12 @@ local function valid_win(winid)
   return winid and vim.api.nvim_win_is_valid(winid)
 end
 
-local function valid_codex_win(winid)
+local function valid_opencode_win(winid)
   return valid_win(winid) and valid_buf(state.bufnr) and vim.api.nvim_win_get_buf(winid) == state.bufnr
 end
 
 local function valid_code_win(winid)
-  if not valid_win(winid) or valid_codex_win(winid) then
+  if not valid_win(winid) or valid_opencode_win(winid) then
     return false
   end
 
@@ -48,12 +47,12 @@ local function valid_job(job_id)
   return type(job_id) == "number" and job_id > 0
 end
 
-local function current_is_codex_buffer()
+local function current_is_opencode_buffer()
   return valid_buf(state.bufnr) and vim.api.nvim_get_current_buf() == state.bufnr
 end
 
-local function codex_terminal_active()
-  return current_is_codex_buffer() and valid_job(state.job_id)
+local function opencode_terminal_active()
+  return current_is_opencode_buffer() and valid_job(state.job_id)
 end
 
 local function stop_checktime_timer()
@@ -65,8 +64,8 @@ local function stop_checktime_timer()
 end
 
 local function check_external_changes()
-  if sync_codex_width then
-    sync_codex_width()
+  if sync_opencode_width then
+    sync_opencode_width()
   end
 
   if not valid_buf(state.bufnr) or not valid_job(state.job_id) then
@@ -132,13 +131,13 @@ local function current_code_mode()
 end
 
 local function remember_code_window(opts)
-  if state.opening_codex then
+  if state.opening_opencode then
     return
   end
 
   local winid = vim.api.nvim_get_current_win()
   local buftype = vim.bo.buftype
-  if buftype ~= "terminal" and not valid_codex_win(winid) then
+  if buftype ~= "terminal" and not valid_opencode_win(winid) then
     state.last_code_winid = winid
     if opts and opts.mode then
       state.last_code_mode = current_code_mode()
@@ -146,8 +145,8 @@ local function remember_code_window(opts)
   end
 end
 
-local function find_codex_window()
-  if valid_codex_win(state.winid) then
+local function find_opencode_window()
+  if valid_opencode_win(state.winid) then
     return state.winid
   end
 
@@ -157,7 +156,7 @@ local function find_codex_window()
 
   for _, tabpage in ipairs(vim.api.nvim_list_tabpages()) do
     for _, winid in ipairs(vim.api.nvim_tabpage_list_wins(tabpage)) do
-      if valid_codex_win(winid) then
+      if valid_opencode_win(winid) then
         state.winid = winid
         return winid
       end
@@ -198,7 +197,7 @@ local function same_layout(left, right)
     and left.count == right.count
 end
 
-local function clamp_codex_width(width)
+local function clamp_opencode_width(width)
   width = math.floor(tonumber(width) or vim.o.columns * DEFAULT_WIDTH_RATIO)
 
   local win_count = math.max(#normal_windows(), 1)
@@ -210,16 +209,16 @@ local function clamp_codex_width(width)
   return math.max(min_width, math.min(width, math.max(max_width, min_width)))
 end
 
-local function default_codex_width()
-  return clamp_codex_width(vim.o.columns * DEFAULT_WIDTH_RATIO)
+local function default_opencode_width()
+  return clamp_opencode_width(vim.o.columns * DEFAULT_WIDTH_RATIO)
 end
 
-local function apply_codex_width(winid, width)
+local function apply_opencode_width(winid, width)
   if not valid_win(winid) then
     return
   end
 
-  local target_width = clamp_codex_width(width or state.codex_width or default_codex_width())
+  local target_width = clamp_opencode_width(width or state.opencode_width or default_opencode_width())
 
   state.applying_width = true
   pcall(vim.api.nvim_set_option_value, "winfixwidth", true, { win = winid })
@@ -231,12 +230,12 @@ local function update_layout_snapshot()
   state.last_layout = layout_signature()
 end
 
-sync_codex_width = function(opts)
-  if state.applying_width or state.opening_codex then
+sync_opencode_width = function(opts)
+  if state.applying_width or state.opening_opencode then
     return
   end
 
-  local winid = find_codex_window()
+  local winid = find_opencode_window()
   if not winid then
     update_layout_snapshot()
     return
@@ -246,36 +245,36 @@ sync_codex_width = function(opts)
   local layout_changed = not same_layout(layout, state.last_layout)
   local current_width = vim.api.nvim_win_get_width(winid)
 
-  if not state.codex_width then
-    state.codex_width = current_width
+  if not state.opencode_width then
+    state.opencode_width = current_width
     update_layout_snapshot()
     return
   end
 
   if layout_changed or (opts and opts.force_restore) then
-    apply_codex_width(winid, state.codex_width)
+    apply_opencode_width(winid, state.opencode_width)
     update_layout_snapshot()
     return
   end
 
-  if current_width ~= state.codex_width then
-    state.codex_width = current_width
-    window_sizes.set("codex_width", current_width)
+  if current_width ~= state.opencode_width then
+    state.opencode_width = current_width
+    window_sizes.set("opencode_width", current_width)
   end
 
   update_layout_snapshot()
 end
 
-local function schedule_codex_width_sync(opts)
+local function schedule_opencode_width_sync(opts)
   vim.schedule(function()
-    if sync_codex_width then
-      sync_codex_width(opts)
+    if sync_opencode_width then
+      sync_opencode_width(opts)
     end
   end)
 end
 
 local function start_terminal_mode()
-  if state.entering_terminal or not codex_terminal_active() or vim.api.nvim_get_mode().mode == "t" then
+  if state.entering_terminal or not opencode_terminal_active() or vim.api.nvim_get_mode().mode == "t" then
     return
   end
 
@@ -285,7 +284,7 @@ local function start_terminal_mode()
 end
 
 local function ensure_terminal_mode()
-  if not state.manual_scrolling and codex_terminal_active() and vim.api.nvim_get_mode().mode ~= "t" then
+  if opencode_terminal_active() and vim.api.nvim_get_mode().mode ~= "t" then
     vim.schedule(start_terminal_mode)
   end
 end
@@ -297,7 +296,7 @@ local function enter_terminal()
   end)
 end
 
-local function restore_codex_window(winid)
+local function restore_opencode_window(winid)
   if not valid_win(winid) or not valid_buf(state.bufnr) or not valid_job(state.job_id) then
     return false
   end
@@ -305,7 +304,7 @@ local function restore_codex_window(winid)
   state.winid = winid
   vim.api.nvim_set_current_win(winid)
   vim.api.nvim_win_set_buf(winid, state.bufnr)
-  apply_codex_width(winid, state.codex_width)
+  apply_opencode_width(winid, state.opencode_width)
   update_layout_snapshot()
   enter_terminal()
   return true
@@ -322,7 +321,7 @@ local function focus_code_window(mode)
       end
     end
 
-    if valid_codex_win(vim.api.nvim_get_current_win()) then
+    if valid_opencode_win(vim.api.nvim_get_current_win()) then
       vim.cmd.wincmd("h")
     end
   end
@@ -346,14 +345,8 @@ local function terminal_to_code()
   end)
 end
 
-local function enter_codex_input()
-  state.manual_scrolling = false
+local function enter_opencode_input()
   enter_terminal()
-end
-
-local function enter_codex_scroll_mode()
-  state.manual_scrolling = true
-  pcall(vim.cmd.stopinsert)
 end
 
 local function set_terminal_keymaps(bufnr)
@@ -362,9 +355,6 @@ local function set_terminal_keymaps(bufnr)
   vim.keymap.set("t", "<M-h>", terminal_to_code, opts)
   vim.keymap.set("t", "<A-h>", terminal_to_code, opts)
   vim.keymap.set("t", "<Esc>h", terminal_to_code, opts)
-  vim.keymap.set("t", [[<C-\><C-n>]], function()
-    enter_terminal()
-  end, { buffer = bufnr, silent = true, desc = "Stay in Codex terminal mode" })
 
   vim.keymap.set("n", "<M-h>", function()
     M.focus_code()
@@ -372,44 +362,32 @@ local function set_terminal_keymaps(bufnr)
   vim.keymap.set("n", "<A-h>", function()
     M.focus_code()
   end, opts)
-  vim.keymap.set("n", "i", enter_codex_input, {
+  vim.keymap.set("n", "i", enter_opencode_input, {
     buffer = bufnr,
     silent = true,
-    desc = "Enter Codex input",
+    desc = "Enter OpenCode input",
   })
-  vim.keymap.set("n", "a", enter_codex_input, {
+  vim.keymap.set("n", "a", enter_opencode_input, {
     buffer = bufnr,
     silent = true,
-    desc = "Enter Codex input",
+    desc = "Enter OpenCode input",
   })
-  vim.keymap.set("n", "<CR>", enter_codex_input, {
+  vim.keymap.set("n", "<CR>", enter_opencode_input, {
     buffer = bufnr,
     silent = true,
-    desc = "Enter Codex input",
-  })
-  vim.keymap.set({ "n", "t" }, "<M-;>", enter_codex_scroll_mode, {
-    buffer = bufnr,
-    silent = true,
-    nowait = true,
-    desc = "Enter Codex scroll mode",
-  })
-  vim.keymap.set({ "n", "t" }, "<A-;>", enter_codex_scroll_mode, {
-    buffer = bufnr,
-    silent = true,
-    nowait = true,
-    desc = "Enter Codex scroll mode",
+    desc = "Enter OpenCode input",
   })
 end
 
-local function start_codex()
+local function start_opencode()
   state.bufnr = vim.api.nvim_create_buf(false, true)
   vim.api.nvim_win_set_buf(0, state.bufnr)
   vim.bo[state.bufnr].bufhidden = "hide"
-  vim.bo[state.bufnr].filetype = "codex"
+  vim.bo[state.bufnr].filetype = "opencode"
   vim.bo[state.bufnr].scrollback = CODEX_TERMINAL_SCROLLBACK
-  vim.api.nvim_buf_set_name(state.bufnr, "Codex Agent")
+  vim.api.nvim_buf_set_name(state.bufnr, "OpenCode Agent")
 
-  state.job_id = vim.fn.termopen({ "codex" }, {
+  state.job_id = vim.fn.termopen({ "opencode" }, {
     cwd = project_root(),
     on_exit = function()
       state.job_id = nil
@@ -418,7 +396,7 @@ local function start_codex()
   })
 
   if not valid_job(state.job_id) then
-    vim.notify("Failed to start codex", vim.log.levels.ERROR)
+    vim.notify("Failed to start opencode", vim.log.levels.ERROR)
     return
   end
 
@@ -428,12 +406,12 @@ end
 
 local function open_window()
   remember_code_window()
-  state.opening_codex = true
+  state.opening_opencode = true
   vim.cmd("botright vertical split")
   state.winid = vim.api.nvim_get_current_win()
-  state.opening_codex = false
-  state.codex_width = state.codex_width or default_codex_width()
-  apply_codex_width(state.winid, state.codex_width)
+  state.opening_opencode = false
+  state.opencode_width = state.opencode_width or default_opencode_width()
+  apply_opencode_width(state.winid, state.opencode_width)
   update_layout_snapshot()
 end
 
@@ -446,21 +424,21 @@ function M.focus_code_insert()
 end
 
 function M.toggle()
-  local codex_winid = find_codex_window()
-  if codex_winid then
+  local opencode_winid = find_opencode_window()
+  if opencode_winid then
     local current = vim.api.nvim_get_current_win()
-    if current == codex_winid then
+    if current == opencode_winid then
       focus_code_window(state.last_code_mode)
     else
       remember_code_window({ mode = true })
-      vim.api.nvim_set_current_win(codex_winid)
+      vim.api.nvim_set_current_win(opencode_winid)
       enter_terminal()
     end
     return
   end
 
   if valid_win(state.winid) and valid_buf(state.bufnr) and valid_job(state.job_id) then
-    restore_codex_window(state.winid)
+    restore_opencode_window(state.winid)
     return
   else
     remember_code_window({ mode = true })
@@ -474,24 +452,24 @@ function M.toggle()
     if valid_buf(state.bufnr) then
       vim.api.nvim_buf_delete(state.bufnr, { force = true })
     end
-    start_codex()
+    start_opencode()
   end
 
   enter_terminal()
 end
 
 function M.setup()
-  local group = vim.api.nvim_create_augroup("codex_agent_terminal", { clear = true })
+  local group = vim.api.nvim_create_augroup("opencode_agent_terminal", { clear = true })
 
   vim.api.nvim_create_autocmd({ "BufEnter", "WinEnter" }, {
     group = group,
     callback = function()
       local winid = vim.api.nvim_get_current_win()
-      if valid_codex_win(winid) then
+      if valid_opencode_win(winid) then
         state.winid = winid
         enter_terminal()
       elseif winid == state.winid and valid_buf(state.bufnr) and valid_job(state.job_id) then
-        restore_codex_window(winid)
+        restore_opencode_window(winid)
       else
         remember_code_window()
         check_external_changes()
@@ -515,14 +493,14 @@ function M.setup()
   vim.api.nvim_create_autocmd({ "WinClosed", "WinNew", "VimResized", "TabEnter" }, {
     group = group,
     callback = function()
-      schedule_codex_width_sync({ force_restore = true })
+      schedule_opencode_width_sync({ force_restore = true })
     end,
   })
 
   pcall(vim.api.nvim_create_autocmd, "WinResized", {
     group = group,
     callback = function()
-      schedule_codex_width_sync()
+      schedule_opencode_width_sync()
     end,
   })
 

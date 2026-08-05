@@ -2,13 +2,13 @@
 -- Default keymaps that are always set: https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua
 -- Add any additional keymaps here
 
-local codex = require("config.codex")
+local opencode = require("config.opencode")
 local window_sizes = require("config.window_sizes")
 
 local MIN_TERMINAL_WIDTH = 40
 local MAX_TERMINALS = 3
 
-codex.setup()
+opencode.setup()
 window_sizes.setup()
 
 local function current_snacks_terminal()
@@ -133,8 +133,8 @@ local function focus_numbered_terminal(count)
   local cwd = terminal and terminal.cwd or nil
   leave_terminal_input()
 
-  if vim.bo.filetype == "codex" then
-    codex.focus_code()
+  if vim.bo.filetype == "opencode" then
+    opencode.focus_code()
   end
 
   vim.schedule(function()
@@ -173,9 +173,9 @@ local function insert_left()
   return row > 1 and "<Up><End>" or ""
 end
 
-vim.keymap.set({ "n", "i" }, "<M-h>", codex.toggle, { desc = "Toggle Codex agent" })
-vim.keymap.set({ "n", "i" }, "<A-h>", codex.toggle, { desc = "Toggle Codex agent" })
-vim.keymap.set("i", "<Esc>h", codex.toggle, { desc = "Toggle Codex agent" })
+vim.keymap.set({ "n", "i" }, "<M-h>", opencode.toggle, { desc = "Toggle OpenCode agent" })
+vim.keymap.set({ "n", "i" }, "<A-h>", opencode.toggle, { desc = "Toggle OpenCode agent" })
+vim.keymap.set("i", "<Esc>h", opencode.toggle, { desc = "Toggle OpenCode agent" })
 
 vim.keymap.set({ "n", "i", "t" }, "<C-/>", toggle_current_terminal, { desc = "Toggle Current Terminal" })
 vim.keymap.set({ "n", "i", "t" }, "<C-_>", toggle_current_terminal, { desc = "Toggle Current Terminal" })
@@ -223,5 +223,5 @@ local function focus_code_window()
   end
 end
 
-vim.keymap.set({ "n", "t" }, "<M-j>", focus_code_window, { desc = "Focus Code Window (keep terminal open)" })
+vim.keymap.set({ "n", "t" }, "<M-;>", focus_code_window, { desc = "Focus Code Window (keep terminal open)" })
 vim.keymap.set("i", "<Left>", insert_left, { expr = true, replace_keycodes = true, desc = "Move left across lines" })

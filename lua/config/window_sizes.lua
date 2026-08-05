@@ -1,7 +1,7 @@
 local M = {}
 
 local DEFAULTS = {
-  codex_width = nil,
+  opencode_width = nil,
   explorer_width = 25,
   terminal_height = nil,
 }

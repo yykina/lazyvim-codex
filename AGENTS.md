@@ -2,9 +2,9 @@
 
 ## Project Structure & Module Organization
 
-This repository is a LazyVim starter fork for a Neovim configuration with a Codex terminal workflow. `init.lua` is the entry point and loads `lua/config/lazy.lua`, which bootstraps lazy.nvim and imports LazyVim plus local plugins.
+This repository is a LazyVim starter fork for a Neovim configuration with an OpenCode terminal workflow. `init.lua` is the entry point and loads `lua/config/lazy.lua`, which bootstraps lazy.nvim and imports LazyVim plus local plugins.
 
-- `lua/config/`: core configuration such as options, keymaps, autocmds, lazy.nvim setup, and Codex integration.
+- `lua/config/`: core configuration such as options, keymaps, autocmds, lazy.nvim setup, and OpenCode integration.
 - `lua/plugins/`: plugin specs and overrides. Keep plugin-specific settings here unless they are shared editor behavior.
 - `lazyvim.json` and `lazy-lock.json`: LazyVim metadata and pinned plugin versions.
 - `stylua.toml`: Lua formatter settings.
@@ -14,14 +14,14 @@ There is no dedicated test or asset directory in this config. Add new files unde
 ## Build, Test, and Development Commands
 
 - `nvim`: start Neovim and let lazy.nvim install or update missing plugins.
-- `nvim --headless "+lua require('config.codex'); print('codex config ok')" "+qa"`: quick load check for the Codex config.
+- `nvim --headless "+lua require('config.opencode'); print('opencode config ok')" "+qa"`: quick load check for the OpenCode config.
 - `nvim --headless "+Lazy! sync" "+qa"`: synchronize plugins in a noninteractive session.
 - `/home/zhhuang/.local/share/nvim/mason/bin/stylua .`: format Lua files using the repository style. `stylua` is installed by Mason here and may not be on the shell `PATH`.
 - `git status -sb`: inspect local changes before committing.
 
 ## Coding Style & Naming Conventions
 
-Write Lua with 2-space indentation, spaces instead of tabs, and a 120-column target, matching `stylua.toml`. Prefer small, focused modules and local helper functions over global state. Use descriptive lowercase filenames such as `codex.lua` or `snacks.lua`. Keep LazyVim plugin specs declarative in `lua/plugins/*.lua`; keep editor behavior in `lua/config/*.lua`.
+Write Lua with 2-space indentation, spaces instead of tabs, and a 120-column target, matching `stylua.toml`. Prefer small, focused modules and local helper functions over global state. Use descriptive lowercase filenames such as `opencode.lua` or `snacks.lua`. Keep LazyVim plugin specs declarative in `lua/plugins/*.lua`; keep editor behavior in `lua/config/*.lua`.
 
 ## Testing Guidelines
 
