@@ -127,6 +127,55 @@ local function code_cwd()
   return vim.uv.cwd()
 end
 
+local function opencode_panel_visible()
+  for _, winid in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    if vim.bo[vim.api.nvim_win_get_buf(winid)].filetype == "opencode" then
+      return true
+    end
+  end
+  return false
+end
+
+local function code_winid_for_terminal()
+  for _, winid in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    local bufnr = vim.api.nvim_win_get_buf(winid)
+    if vim.bo[bufnr].buftype ~= "terminal" and vim.bo[bufnr].filetype ~= "opencode" then
+      return winid
+    end
+  end
+  return nil
+end
+
+local function terminal_split_opts()
+  if not opencode_panel_visible() then
+    return {}
+  end
+  local winid = code_winid_for_terminal()
+  if winid then
+    return { win = { position = "bottom", relative = "win", win = winid } }
+  end
+  return {}
+end
+
+local function rehome_terminal_if_needed(terminal, opts)
+  if not (terminal and opts.win and opts.win.relative == "win" and opts.win.win) then
+    return
+  end
+
+  local terminal_opts = terminal.opts or {}
+  if terminal_opts.relative == "win" and terminal_opts.position == "bottom" and terminal_opts.win == opts.win.win then
+    return
+  end
+
+  if terminal.win and vim.api.nvim_win_is_valid(terminal.win) then
+    terminal:hide()
+  end
+
+  terminal_opts.relative = "win"
+  terminal_opts.position = "bottom"
+  terminal_opts.win = opts.win.win
+end
+
 local function focus_numbered_terminal(count)
   count = terminal_count(count)
   local terminal = current_snacks_terminal()
@@ -138,8 +187,13 @@ local function focus_numbered_terminal(count)
   end
 
   vim.schedule(function()
-    local terminal = Snacks.terminal.focus(nil, { cwd = cwd or code_cwd(), count = count })
+    local opts = terminal_split_opts()
+    opts.cwd = cwd or code_cwd()
+    opts.count = count
+    rehome_terminal_if_needed(numbered_terminal(count, opts.cwd), opts)
+    local terminal = Snacks.terminal.focus(nil, opts)
     sort_visible_terminals(terminal and terminal.win)
+    opencode.restore_width()
     vim.cmd("redraw!")
   end)
 end
@@ -173,12 +227,15 @@ local function insert_left()
   return row > 1 and "<Up><End>" or ""
 end
 
-vim.keymap.set({ "n", "i" }, "<M-h>", opencode.toggle, { desc = "Toggle OpenCode agent" })
-vim.keymap.set({ "n", "i" }, "<A-h>", opencode.toggle, { desc = "Toggle OpenCode agent" })
+vim.keymap.set({ "n", "i", "t" }, "<M-h>", opencode.toggle, { desc = "Toggle OpenCode agent" })
+vim.keymap.set({ "n", "i", "t" }, "<A-h>", opencode.toggle, { desc = "Toggle OpenCode agent" })
 vim.keymap.set("i", "<Esc>h", opencode.toggle, { desc = "Toggle OpenCode agent" })
 
 vim.keymap.set({ "n", "i", "t" }, "<C-/>", toggle_current_terminal, { desc = "Toggle Current Terminal" })
 vim.keymap.set({ "n", "i", "t" }, "<C-_>", toggle_current_terminal, { desc = "Toggle Current Terminal" })
+vim.keymap.set("t", "<C-n>", function()
+  vim.cmd.stopinsert()
+end, { desc = "Terminal Normal Mode" })
 vim.keymap.set({ "n", "i", "t" }, "<M-u>", function()
   focus_numbered_terminal(1)
 end, { desc = "Terminal 1 (Root Dir)" })

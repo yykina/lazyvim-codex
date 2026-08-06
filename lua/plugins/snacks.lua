@@ -1,6 +1,17 @@
 return {
   {
     "folke/snacks.nvim",
+    keys = {
+      {
+        "<leader>e",
+        function()
+          local name = vim.api.nvim_buf_get_name(0)
+          local dir = name ~= "" and vim.fn.fnamemodify(name, ":h") or vim.uv.cwd()
+          Snacks.explorer({ cwd = dir })
+        end,
+        desc = "Explorer Snacks (current file dir)",
+      },
+    },
     opts = {
       dashboard = {
         preset = {

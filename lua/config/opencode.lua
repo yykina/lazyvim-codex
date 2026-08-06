@@ -423,6 +423,13 @@ function M.focus_code_insert()
   focus_code_window("i")
 end
 
+function M.restore_width()
+  schedule_opencode_width_sync({ force_restore = true })
+  vim.defer_fn(function()
+    sync_opencode_width({ force_restore = true })
+  end, 50)
+end
+
 function M.toggle()
   local opencode_winid = find_opencode_window()
   if opencode_winid then
@@ -442,6 +449,9 @@ function M.toggle()
     return
   else
     remember_code_window({ mode = true })
+    if vim.bo.buftype == "terminal" then
+      focus_code_window("n")
+    end
     open_window()
   end
 
